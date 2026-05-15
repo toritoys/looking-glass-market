@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 // Base biome config: ground color, fog color, fog density,
 // ambient light color, directional light color and position.
@@ -30,7 +31,6 @@ const BIOME = {
     fogDensity:  0.035,
     ambient:     { color: 0x887850, intensity: 0.65 },
     sun:         { color: 0xf0c870, intensity: 1.2, pos: [7, 8, 2] },
-    // Split lighting handled via second fill light in initEnvironment
     splitLight:  true,
   },
   open_grassland: {
@@ -88,6 +88,78 @@ const ANOMALY_CONFIG = {
   arid_scrubland:     { color: 0xe88840, pos: [2.0,  0.08, 0.5],  scale: [1.3,  0.04, 1.0] },
 };
 
+// Biome tint multiplied onto FBX material colors after load
+const BIOME_TINTS = {
+  arctic_tundra:      0xd8e8f0,
+  boreal_forest:      0x607855,
+  temperate_woodland: 0x90a870,
+  woodland_edge:      0xb0a060,
+  open_grassland:     0xc8bc60,
+  andean_highland:    0x9098a0,
+  arid_scrubland:     0xc09848,
+};
+
+// FBX asset lists per biome — radius = base distance from origin, spread = radius variance
+const BIOME_ASSETS = {
+  arctic_tundra: [
+    { file: 'Pine_1.fbx',           count: 3, radius: 6,   spread: 4 },
+    { file: 'Pine_2.fbx',           count: 2, radius: 9,   spread: 3 },
+    { file: 'Rock_Medium_1.fbx',    count: 6, radius: 4,   spread: 5 },
+    { file: 'Rock_Medium_2.fbx',    count: 4, radius: 7,   spread: 4 },
+    { file: 'DeadTree_1.fbx',       count: 2, radius: 11,  spread: 3 },
+    { file: 'Grass_Wispy_Tall.fbx', count: 8, radius: 3.5, spread: 6 },
+  ],
+  boreal_forest: [
+    { file: 'Pine_1.fbx',        count: 8, radius: 5,  spread: 5 },
+    { file: 'Pine_2.fbx',        count: 6, radius: 8,  spread: 4 },
+    { file: 'Pine_3.fbx',        count: 5, radius: 12, spread: 4 },
+    { file: 'DeadTree_1.fbx',    count: 3, radius: 7,  spread: 3 },
+    { file: 'Rock_Medium_1.fbx', count: 4, radius: 4,  spread: 4 },
+    { file: 'Rock_Medium_2.fbx', count: 3, radius: 6,  spread: 3 },
+  ],
+  temperate_woodland: [
+    { file: 'CommonTree_1.fbx',      count: 5,  radius: 6,   spread: 4 },
+    { file: 'CommonTree_2.fbx',      count: 4,  radius: 9,   spread: 4 },
+    { file: 'BirchTree_1.fbx',       count: 4,  radius: 7,   spread: 4 },
+    { file: 'BirchTree_2.fbx',       count: 3,  radius: 11,  spread: 3 },
+    { file: 'MapleTree_1.fbx',       count: 3,  radius: 8,   spread: 3 },
+    { file: 'Bush_Common.fbx',       count: 6,  radius: 4,   spread: 5 },
+    { file: 'Mushroom_Common.fbx',   count: 5,  radius: 3.5, spread: 5 },
+    { file: 'Flower_1.fbx',          count: 8,  radius: 4,   spread: 6 },
+    { file: 'Grass_Common_Tall.fbx', count: 10, radius: 3.5, spread: 7 },
+  ],
+  woodland_edge: [
+    { file: 'CommonTree_1.fbx',      count: 3, radius: 8,   spread: 3 },
+    { file: 'BirchTree_1.fbx',       count: 3, radius: 10,  spread: 3 },
+    { file: 'Bush_Common.fbx',       count: 5, radius: 4,   spread: 5 },
+    { file: 'Grass_Common_Tall.fbx', count: 8, radius: 3.5, spread: 6 },
+    { file: 'Grass_Wispy_Tall.fbx',  count: 6, radius: 5,   spread: 5 },
+    { file: 'Flower_1.fbx',          count: 6, radius: 4,   spread: 5 },
+  ],
+  open_grassland: [
+    { file: 'Grass_Common_Tall.fbx', count: 12, radius: 4,   spread: 8 },
+    { file: 'Grass_Wispy_Tall.fbx',  count: 10, radius: 5,   spread: 7 },
+    { file: 'Flower_1.fbx',          count: 8,  radius: 3.5, spread: 6 },
+    { file: 'Rock_Medium_1.fbx',     count: 3,  radius: 10,  spread: 3 },
+    { file: 'CommonTree_1.fbx',      count: 2,  radius: 14,  spread: 2 },
+  ],
+  andean_highland: [
+    { file: 'Rock_Medium_1.fbx',    count: 8, radius: 4,   spread: 5 },
+    { file: 'Rock_Medium_2.fbx',    count: 7, radius: 7,   spread: 5 },
+    { file: 'Grass_Wispy_Tall.fbx', count: 6, radius: 4,   spread: 5 },
+    { file: 'Pine_1.fbx',           count: 2, radius: 12,  spread: 2 },
+    { file: 'DeadTree_USN_1.fbx',   count: 3, radius: 9,   spread: 3 },
+  ],
+  arid_scrubland: [
+    { file: 'Rock_Medium_1.fbx',    count: 7, radius: 4,   spread: 5 },
+    { file: 'Rock_Medium_2.fbx',    count: 5, radius: 7,   spread: 4 },
+    { file: 'DeadTree_1.fbx',       count: 3, radius: 8,   spread: 3 },
+    { file: 'TwistedTree_1.fbx',    count: 3, radius: 10,  spread: 3 },
+    { file: 'Grass_Wispy_Tall.fbx', count: 8, radius: 3.5, spread: 6 },
+    { file: 'DeadTree_USN_1.fbx',   count: 2, radius: 13,  spread: 2 },
+  ],
+};
+
 let _scene = null;
 let ambientLight = null;
 let sunLight = null;
@@ -97,11 +169,82 @@ let currentBiome = null;
 let anomalyMesh = null;
 let anomalyTime = 0;
 
+const envMaterials = []; // { material, h, s, l } — base tinted HSL for sat animation
+let satFrom = 1.0;
+let satTo = 1.0;
+let colorProgress = 1.0;
+let _currentSat = 1.0;
+
+// Golden-angle deterministic placement — no Math.random()
+function seededPos(i, radius, spread) {
+  const angle = i * 2.399963; // golden angle in radians
+  const r = radius + (i % spread) * 1.2;
+  return [Math.cos(angle) * r, 0, Math.sin(angle) * r];
+}
+
+function loadEnvironmentAssets(scene, ecosystemId) {
+  const assets = BIOME_ASSETS[ecosystemId];
+  if (!assets) return;
+
+  const tintColor = new THREE.Color(BIOME_TINTS[ecosystemId] ?? 0xffffff);
+  const loader = new FBXLoader();
+  let placementIndex = 0;
+
+  for (const { file, count, radius, spread } of assets) {
+    for (let i = 0; i < count; i++) {
+      const pi = placementIndex++;
+      loader.load(
+        `nature/${file}`,
+        object => {
+          object.animations = [];
+          object.scale.setScalar(0.01);
+
+          const [x, , z] = seededPos(pi, radius, spread);
+          object.position.set(x, 0, z);
+          object.rotation.y = pi * 1.618;
+
+          object.traverse(child => {
+            if (!child.isMesh) return;
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            const cloned = mats.map(m => {
+              if (!m) return m;
+              const c = m.clone();
+              c.color.multiply(tintColor);
+              const hsl = {};
+              c.color.getHSL(hsl);
+              // store base (post-tint) HSL for saturation animation
+              envMaterials.push({ material: c, h: hsl.h, s: hsl.s, l: hsl.l });
+              // apply current sat immediately so newly loaded assets match the scene
+              c.color.setHSL(hsl.h, Math.max(0, hsl.s * _currentSat), hsl.l);
+              return c;
+            });
+            child.material = Array.isArray(child.material) ? cloned : cloned[0];
+          });
+
+          scene.add(object);
+        },
+        undefined,
+        err => console.error(`[environment] FBX load failed: ${file}`, err)
+      );
+    }
+  }
+}
+
 export function initEnvironment(scene, ecosystemId) {
   _scene = scene;
   currentBiome = ecosystemId;
   anomalyMesh = null;
   anomalyTime = 0;
+
+  // Reset FBX color transition state for new session
+  envMaterials.length = 0;
+  satFrom = 1.0;
+  satTo = 1.0;
+  colorProgress = 1.0;
+  _currentSat = 1.0;
 
   const cfg = BIOME[ecosystemId];
   if (!cfg) {
@@ -162,6 +305,9 @@ export function initEnvironment(scene, ecosystemId) {
     anomalyMesh.position.set(...anomalyCfg.pos);
     scene.add(anomalyMesh);
   }
+
+  // FBX environment geometry — async, populates envMaterials as files resolve
+  loadEnvironmentAssets(scene, ecosystemId);
 }
 
 export function getAnomaly() {
@@ -173,6 +319,15 @@ export function animateAnomaly(delta) {
   anomalyTime += delta;
   anomalyMesh.material.opacity = 0.12 + Math.sin(anomalyTime * 0.65) * 0.10;
   anomalyMesh.rotation.y += delta * 0.18;
+
+  // Saturation color transition tick
+  if (colorProgress < 1) {
+    colorProgress = Math.min(1, colorProgress + delta);
+    _currentSat = satFrom + (satTo - satFrom) * colorProgress;
+    for (const { material, h, s, l } of envMaterials) {
+      material.color.setHSL(h, Math.max(0, s * _currentSat), l);
+    }
+  }
 }
 
 export function applyMarketState(state) {
@@ -189,6 +344,11 @@ export function applyMarketState(state) {
   if (_scene?.fog) {
     _scene.fog.density = cfg.fogDensity * mod.fogMult;
   }
+
+  // Begin saturation transition for FBX environment materials
+  satFrom = _currentSat;
+  satTo = state === 'flourishing' ? 1.2 : state === 'crisis' ? 0.4 : 1.0;
+  colorProgress = 0;
 
   return PARTICLE_TRIGGERS[currentBiome]?.[state] ?? 'none';
 }
