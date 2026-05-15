@@ -150,7 +150,7 @@ export const ECOSYSTEMS = {
         "{CHANGE} this month. The fox is in open field, fully exposed, moving fast with no particular destination. This is not what it was built for.",
         "{TICKER} down {CHANGE}. The fox sits at the treeline in full daylight. The between-place it mastered doesn't exist right now. It waits for the edge to return."
       ],
-      inversion: "The margin widens to the width of a meadow — a whole new in-between that is neither wood nor field, just edge, edge all the way to the horizon. The fox runs it from end to end in {DAYS} minutes. For thirty seconds there is nothing but the threshold it was made for. Then the field and wood press back in."
+      inversion: "The margin widens to the width of a meadow — a whole new in-between that is neither wood nor field, just edge, edge all the way to the horizon. The fox runs it from end to end. For thirty seconds there is nothing but the threshold it was made for. Then the field and wood press back in."
     }
   },
 

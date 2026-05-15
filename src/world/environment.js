@@ -76,16 +76,33 @@ const PARTICLE_TRIGGERS = {
   arid_scrubland:     { stressed: 'dust',  crisis: 'dust' },
 };
 
+// Anomaly: subtle clickable element, biome-appropriate.
+// Flat scale = shimmer/ripple on ground. Unit scale = floating mote.
+const ANOMALY_CONFIG = {
+  arctic_tundra:      { color: 0x90d8f8, pos: [2.5,  0.04, 0.5],  scale: [1.6, 0.04, 1.1] },
+  boreal_forest:      { color: 0xe09040, pos: [-1.5, 1.8,  0.5],  scale: [0.14, 0.14, 0.14] },
+  temperate_woodland: { color: 0xa0c840, pos: [1.5,  1.2, -0.5],  scale: [0.13, 0.13, 0.13] },
+  woodland_edge:      { color: 0xd0a858, pos: [0.5,  0.6, -1.5],  scale: [0.13, 0.13, 0.13] },
+  open_grassland:     { color: 0xe8d060, pos: [-2.0, 0.06, 1.0],  scale: [1.2,  0.04, 0.9] },
+  andean_highland:    { color: 0xa8d8f0, pos: [1.5,  0.18, -1.0], scale: [0.16, 0.16, 0.16] },
+  arid_scrubland:     { color: 0xe88840, pos: [2.0,  0.08, 0.5],  scale: [1.3,  0.04, 1.0] },
+};
+
 let _scene = null;
 let ambientLight = null;
 let sunLight = null;
 let fillLight = null;
 let groundMesh = null;
 let currentBiome = null;
+let anomalyMesh = null;
+let anomalyTime = 0;
 
 export function initEnvironment(scene, ecosystemId) {
   _scene = scene;
   currentBiome = ecosystemId;
+  anomalyMesh = null;
+  anomalyTime = 0;
+
   const cfg = BIOME[ecosystemId];
   if (!cfg) {
     console.error(`[environment] No config for ecosystem: ${ecosystemId}`);
@@ -129,6 +146,33 @@ export function initEnvironment(scene, ecosystemId) {
     fillLight.position.set(-8, 4, -2);
     scene.add(fillLight);
   }
+
+  // Anomaly — subtle, persistent, no label
+  const anomalyCfg = ANOMALY_CONFIG[ecosystemId];
+  if (anomalyCfg) {
+    const geo = new THREE.SphereGeometry(1, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({
+      color: anomalyCfg.color,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+    });
+    anomalyMesh = new THREE.Mesh(geo, mat);
+    anomalyMesh.scale.set(...anomalyCfg.scale);
+    anomalyMesh.position.set(...anomalyCfg.pos);
+    scene.add(anomalyMesh);
+  }
+}
+
+export function getAnomaly() {
+  return anomalyMesh;
+}
+
+export function animateAnomaly(delta) {
+  if (!anomalyMesh) return;
+  anomalyTime += delta;
+  anomalyMesh.material.opacity = 0.12 + Math.sin(anomalyTime * 0.65) * 0.10;
+  anomalyMesh.rotation.y += delta * 0.18;
 }
 
 export function applyMarketState(state) {
