@@ -44,17 +44,17 @@ looking-glass-market/
 
 ---
 
-## Ecosystem Map — 1:1 Creature/Environment (Terrestrial + Aquatic Non-Ocean)
+## Ecosystem Map — 1:1 Creature/Environment
 
-| ID | Environment | Creature |
-|----|-------------|----------|
-| `temperate_forest` | Temperate Forest | Beaver |
-| `tropical_rainforest` | Tropical Rainforest | Poison Dart Frog |
-| `swamp_bayou` | Swamp / Bayou | Alligator |
-| `mangrove_coast` | Mangrove Coast | Mudskipper |
-| `cloud_forest` | Cloud Forest | Resplendent Quetzal |
-| `boreal_forest` | Boreal Forest | Moose |
-| `savanna_wetland` | Savanna Wetland | Hippopotamus |
+| ID | Environment | Creature | glTF Asset |
+|----|-------------|----------|------------|
+| `arctic_tundra` | Arctic Tundra | Husky | `Husky.gltf` |
+| `boreal_forest` | Boreal Forest | Wolf | `Wolf.gltf` |
+| `temperate_woodland` | Temperate Woodland | Stag | `Stag.gltf` |
+| `woodland_edge` | Woodland Edge | Fox | `Fox.gltf` |
+| `open_grassland` | Open Grassland | Horse | `Horse.gltf` |
+| `andean_highland` | Andean Highland | Alpaca | `Alpaca.gltf` |
+| `arid_scrubland` | Arid Scrubland | Donkey | `Donkey.gltf` |
 
 Entry logic: if user selects creature → environment is that creature's habitat. If user selects environment → creature is that environment's inhabitant. Always resolves to the same 1:1 pair.
 

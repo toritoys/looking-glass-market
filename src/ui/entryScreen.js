@@ -2,13 +2,13 @@ import { ECOSYSTEMS } from '../data/ecosystems.js';
 import { fetchQuote } from '../stock/finnhub.js';
 
 const CREATURE_SHAPES = {
-  temperate_forest:    { rx: 38, ry: 28 },  // Beaver — wide, low
-  tropical_rainforest: { rx: 20, ry: 22 },  // Poison Dart Frog — small, compact
-  swamp_bayou:         { rx: 50, ry: 18 },  // Alligator — very wide, flat
-  mangrove_coast:      { rx: 28, ry: 16 },  // Mudskipper — elongated low
-  cloud_forest:        { rx: 18, ry: 30 },  // Resplendent Quetzal — tall, narrow
-  boreal_forest:       { rx: 24, ry: 38 },  // Moose — tall
-  savanna_wetland:     { rx: 42, ry: 30 },  // Hippopotamus — wide, heavy
+  arctic_tundra:      { rx: 34, ry: 26 },  // Husky — wide, sturdy
+  boreal_forest:      { rx: 26, ry: 32 },  // Wolf — lean, tall
+  temperate_woodland: { rx: 22, ry: 36 },  // Stag — tall, narrow
+  woodland_edge:      { rx: 24, ry: 20 },  // Fox — small, agile
+  open_grassland:     { rx: 36, ry: 36 },  // Horse — wide, tall
+  andean_highland:    { rx: 26, ry: 34 },  // Alpaca — fluffy, upright
+  arid_scrubland:     { rx: 30, ry: 28 },  // Donkey — sturdy, medium
 };
 
 const ECOSYSTEM_LIST = Object.values(ECOSYSTEMS);
@@ -208,8 +208,6 @@ function selectEcosystem(ecosystemId) {
   input.placeholder = 'Enter a stock symbol';
   input.spellcheck = false;
   input.autocomplete = 'off';
-
-  applyStyles(input, { '--placeholder-color': 'rgba(255,255,255,0.3)' });
 
   const errorText = el('div', {
     color: 'rgba(255,255,255,0.6)',
