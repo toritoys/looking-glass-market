@@ -1,20 +1,23 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ECOSYSTEMS } from '../data/ecosystems.js';
 import { fetchQuote } from '../stock/finnhub.js';
 
-const CREATURE_SHAPES = {
-  arctic_tundra:      { rx: 34, ry: 26 },  // Husky — wide, sturdy
-  boreal_forest:      { rx: 26, ry: 32 },  // Wolf — lean, tall
-  temperate_woodland: { rx: 22, ry: 36 },  // Stag — tall, narrow
-  woodland_edge:      { rx: 24, ry: 20 },  // Fox — small, agile
-  open_grassland:     { rx: 36, ry: 36 },  // Horse — wide, tall
-  andean_highland:    { rx: 26, ry: 34 },  // Alpaca — fluffy, upright
-  arid_scrubland:     { rx: 30, ry: 28 },  // Donkey — sturdy, medium
+const PREVIEW_ASSETS = {
+  arctic_tundra:      'Husky',
+  boreal_forest:      'Wolf',
+  temperate_woodland: 'Stag',
+  woodland_edge:      'Fox',
+  open_grassland:     'Horse',
+  andean_highland:    'Alpaca',
+  arid_scrubland:     'Donkey',
 };
 
 const ECOSYSTEM_LIST = Object.values(ECOSYSTEMS);
 
 let overlay;
 let onReadyCallback;
+let previewHandles = []; // dispose handles for the 7 creature preview renderers
 
 export function init(onReady) {
   onReadyCallback = onReady;
@@ -37,6 +40,126 @@ export function init(onReady) {
   renderChoiceScreen();
   document.body.appendChild(overlay);
 }
+
+// ─── Preview renderers ───────────────────────────────────────────────────────
+
+function stopAllPreviews() {
+  for (const h of previewHandles) h.dispose();
+  previewHandles = [];
+}
+
+function createCreaturePreview(ecosystemId) {
+  let aborted = false; // guard against late GLB callbacks after disposal
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(45, 160 / 200, 0.1, 100);
+  camera.position.set(0, 1.5, 4);
+  camera.lookAt(0, 1, 0);
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(160, 200);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(2, 4, 2);
+  scene.add(dirLight);
+
+  let model        = null;
+  let mixer        = null;
+  let idleAction   = null;
+  let idle2Action  = null;
+  let currentAction = null;
+  let rotating     = true;
+  let rafId        = null;
+  let lastTime     = 0;
+
+  const gltfLoader = new GLTFLoader();
+  const assetName  = PREVIEW_ASSETS[ecosystemId];
+
+  gltfLoader.load(
+    `animals/${assetName}.gltf`,
+    (gltf) => {
+      if (aborted) return;
+
+      model = gltf.scene;
+      const animations = gltf.animations ?? [];
+
+      // Scale to 2 units tall, center horizontally, sit on y=0
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const scale = 2.0 / Math.max(size.x, size.y, size.z);
+      model.scale.setScalar(scale);
+
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+
+      scene.add(model);
+
+      if (animations.length > 0) {
+        mixer = new THREE.AnimationMixer(model);
+
+        const idleClip = THREE.AnimationClip.findByName(animations, 'Idle') ?? animations[0];
+        idleAction = mixer.clipAction(idleClip);
+        idleAction.play();
+        currentAction = idleAction;
+
+        const idle2Clip = THREE.AnimationClip.findByName(animations, 'Idle_2');
+        if (idle2Clip) idle2Action = mixer.clipAction(idle2Clip);
+      }
+    },
+    undefined,
+    (err) => console.error(`[preview] Failed to load ${assetName}:`, err)
+  );
+
+  function tick(time) {
+    rafId = requestAnimationFrame(tick);
+    const delta = Math.min((time - lastTime) / 1000, 0.1);
+    lastTime = time;
+    if (mixer) mixer.update(delta);
+    if (model && rotating) model.rotation.y += 0.3 * delta;
+    renderer.render(scene, camera);
+  }
+  rafId = requestAnimationFrame(tick);
+
+  const canvas = renderer.domElement;
+  canvas.style.display = 'block';
+
+  canvas.addEventListener('mouseenter', () => {
+    rotating = false;
+    if (mixer && idle2Action && currentAction !== idle2Action) {
+      currentAction?.fadeOut(0.3);
+      currentAction = idle2Action;
+      idle2Action.reset().fadeIn(0.3).play();
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    rotating = true;
+    if (mixer && idleAction && currentAction !== idleAction) {
+      currentAction?.fadeOut(0.3);
+      currentAction = idleAction;
+      idleAction.reset().fadeIn(0.3).play();
+    }
+  });
+
+  function dispose() {
+    aborted = true;
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    renderer.dispose();
+    scene.traverse(child => {
+      if (!child.isMesh) return;
+      child.geometry?.dispose();
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(m => m?.dispose());
+    });
+  }
+
+  return { canvas, dispose };
+}
+
+// ─── Screens ─────────────────────────────────────────────────────────────────
 
 function renderChoiceScreen() {
   overlay.innerHTML = '';
@@ -78,6 +201,7 @@ function renderChoiceScreen() {
 
 function renderCreatureGrid() {
   overlay.innerHTML = '';
+  previewHandles = [];
 
   const grid = el('div', {
     display: 'flex',
@@ -98,23 +222,8 @@ function renderCreatureGrid() {
       transition: 'opacity 0.2s',
     });
 
-    const { rx, ry } = CREATURE_SHAPES[ecosystem.id];
-    const svgW = (rx + 10) * 2;
-    const svgH = (ry + 10) * 2;
-
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', svgW);
-    svg.setAttribute('height', svgH);
-    svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
-
-    const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    ellipse.setAttribute('cx', svgW / 2);
-    ellipse.setAttribute('cy', svgH / 2);
-    ellipse.setAttribute('rx', rx);
-    ellipse.setAttribute('ry', ry);
-    ellipse.setAttribute('fill', '#fff');
-    ellipse.setAttribute('opacity', '0.85');
-    svg.appendChild(ellipse);
+    const preview = createCreaturePreview(ecosystem.id);
+    previewHandles.push(preview);
 
     const name = el('div', {
       color: '#fff',
@@ -126,15 +235,21 @@ function renderCreatureGrid() {
       maxWidth: '100px',
     }, ecosystem.creature);
 
-    card.appendChild(svg);
+    card.appendChild(preview.canvas);
     card.appendChild(name);
     addHover(card, 1.0);
 
-    card.addEventListener('click', () => selectEcosystem(ecosystem.id));
+    card.addEventListener('click', () => {
+      stopAllPreviews();
+      selectEcosystem(ecosystem.id);
+    });
     grid.appendChild(card);
   });
 
-  const back = backLink(() => renderChoiceScreen());
+  const back = backLink(() => {
+    stopAllPreviews();
+    renderChoiceScreen();
+  });
   overlay.appendChild(grid);
   overlay.appendChild(back);
 }
@@ -280,6 +395,8 @@ function fadeOut(cb) {
     if (cb) cb();
   }, 1200);
 }
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
 
 function backLink(cb) {
   const link = el('div', {

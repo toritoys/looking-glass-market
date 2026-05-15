@@ -5,7 +5,7 @@ import { init as initNarrative, displayNarrative, displayInversion } from './ui/
 import { fetchQuote, getMarketState } from './stock/finnhub.js';
 import { initScene, startRenderLoop } from './world/sceneManager.js';
 import { initEnvironment, applyMarketState, getAnomaly, animateAnomaly } from './world/environment.js';
-import { loadCreature, updateCreature } from './world/creature.js';
+import { loadCreature, updateCreature, setMarketState, moveCreatureTo } from './world/creature.js';
 import { transitionState, triggerInversion, isInversionLocked, isInversionActive } from './world/transitions.js';
 import { INVERSION_MAP } from './data/marketStates.js';
 
@@ -45,6 +45,7 @@ async function onReady(ecosystemId, quoteData) {
   initEnvironment(scene, ecosystemId);
   loadCreature(scene, ecosystemId);
   applyMarketState(currentState);
+  setMarketState(currentState);
   displayNarrative(ecosystemId, currentState, quoteData);
 
   // Anomaly click detection
@@ -79,6 +80,7 @@ async function poll(symbol) {
     const prev = currentState;
     currentState = newState;
     await transitionState(() => applyMarketState(currentState));
+    setMarketState(currentState);
     displayNarrative(currentEcosystemId, currentState, quoteData);
     console.log(`[LGM] ${prev} → ${currentState}`);
   } else {
@@ -87,11 +89,6 @@ async function poll(symbol) {
 }
 
 function onCanvasClick(e, scene) {
-  if (isInversionLocked()) return;
-
-  const anomaly = getAnomaly();
-  if (!anomaly) return;
-
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2(
     (e.clientX / window.innerWidth) * 2 - 1,
@@ -99,21 +96,34 @@ function onCanvasClick(e, scene) {
   );
   raycaster.setFromCamera(mouse, camera);
 
-  const hits = raycaster.intersectObject(anomaly, true);
-  if (hits.length === 0) return;
-
-  const invertedState = INVERSION_MAP[currentState];
-  console.log(`[LGM] inversion triggered: ${currentState} → ${invertedState}`);
-
-  triggerInversion(
-    () => {
-      applyMarketState(invertedState);
-      displayInversion(currentEcosystemId);
-    },
-    () => {
-      applyMarketState(currentState);
-      displayNarrative(currentEcosystemId, currentState, currentQuoteData);
-      console.log(`[LGM] inversion ended, restored: ${currentState}`);
+  // Anomaly click — triggers inversion (only when not locked)
+  if (!isInversionLocked()) {
+    const anomaly = getAnomaly();
+    if (anomaly) {
+      const hits = raycaster.intersectObject(anomaly, true);
+      if (hits.length > 0) {
+        const invertedState = INVERSION_MAP[currentState];
+        console.log(`[LGM] inversion triggered: ${currentState} → ${invertedState}`);
+        triggerInversion(
+          () => {
+            applyMarketState(invertedState);
+            displayInversion(currentEcosystemId);
+          },
+          () => {
+            applyMarketState(currentState);
+            displayNarrative(currentEcosystemId, currentState, currentQuoteData);
+            console.log(`[LGM] inversion ended, restored: ${currentState}`);
+          }
+        );
+        return;
+      }
     }
-  );
+  }
+
+  // Ground click — move creature to that position
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const groundTarget = new THREE.Vector3();
+  if (raycaster.ray.intersectPlane(groundPlane, groundTarget)) {
+    moveCreatureTo(groundTarget.x, groundTarget.z);
+  }
 }
