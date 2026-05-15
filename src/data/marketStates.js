@@ -34,12 +34,10 @@ export const MARKET_STATES = {
 // crisis:      change <= -3
 export const STATE_IDS = ['flourishing', 'stable', 'uneasy', 'stressed', 'crisis'];
 
-// CLAUDE.md specifies: Flourishing→Crisis, Crisis→Flourishing, Stable stays+color inverts
-// Stressed/uneasy behavior during inversion not specified — resolved in transitions.js
 export const INVERSION_MAP = {
-  flourishing: 'crisis',
-  stable: 'stable',
-  uneasy: 'uneasy',
-  stressed: 'stable',
   crisis: 'flourishing',
+  stressed: 'stable',
+  uneasy: 'uneasy',
+  stable: 'stressed',
+  flourishing: 'crisis',
 };
