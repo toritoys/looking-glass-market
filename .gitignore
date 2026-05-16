@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.claude/
+src/world/Stylized Nature MegaKit*/
+src/world/Ultimate Animated Animals*/
+src/world/Ultimate Stylized Nature*/
