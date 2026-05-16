@@ -33,13 +33,14 @@ export function init() {
   document.body.appendChild(narrativeEl);
 }
 
-export function displayNarrative(ecosystemId, state, quoteData) {
+export function displayNarrative(ecosystemId, state, quoteData, selectionType) {
   const ecosystem = ECOSYSTEMS[ecosystemId];
   if (!ecosystem) return;
-  const strings = ecosystem.strings[state];
+  const set = ecosystem.strings[selectionType ?? 'environment'];
+  const strings = set?.[state];
   if (!strings) return;
 
-  const key = `${ecosystemId}:${state}`;
+  const key = `${ecosystemId}:${selectionType}:${state}`;
   const idx = rotationIndex[key] ?? 0;
   rotationIndex[key] = (idx + 1) % 3;
 

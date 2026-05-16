@@ -56,7 +56,7 @@ async function onReady(ecosystemId, quoteData, selectionType) {
   const initTrigger = applyMarketState(visualState);
   setMarketState(visualState);
   setWeatherState(initTrigger, visualState);
-  displayNarrative(ecosystemId, visualState, quoteData);
+  displayNarrative(ecosystemId, visualState, quoteData, currentSelectionType);
 
   // Anomaly click detection
   renderer.domElement.addEventListener('click', e => onCanvasClick(e, scene));
@@ -96,10 +96,10 @@ async function poll(symbol) {
       setWeatherState(trigger, vState);
     });
     setMarketState(vState);
-    displayNarrative(currentEcosystemId, vState, quoteData);
+    displayNarrative(currentEcosystemId, vState, quoteData, currentSelectionType);
     console.log(`[LGM] ${prev} → ${currentState} (visual: ${vState})`);
   } else {
-    displayNarrative(currentEcosystemId, getVisualState(currentState), quoteData);
+    displayNarrative(currentEcosystemId, getVisualState(currentState), quoteData, currentSelectionType);
   }
 }
 
@@ -130,7 +130,7 @@ function onCanvasClick(e, scene) {
             const vState = getVisualState(currentState);
             const trigger = applyMarketState(vState);
             setWeatherState(trigger, vState);
-            displayNarrative(currentEcosystemId, vState, currentQuoteData);
+            displayNarrative(currentEcosystemId, vState, currentQuoteData, currentSelectionType);
             console.log(`[LGM] inversion ended, restored: ${vState}`);
           }
         );
