@@ -241,7 +241,7 @@ function renderCreatureGrid() {
 
     card.addEventListener('click', () => {
       stopAllPreviews();
-      selectEcosystem(ecosystem.id);
+      selectEcosystem(ecosystem.id, 'creature');
     });
     grid.appendChild(card);
   });
@@ -282,7 +282,7 @@ function renderEnvironmentGrid() {
     }, ecosystem.environment);
 
     addHover(card, 1.0);
-    card.addEventListener('click', () => selectEcosystem(ecosystem.id));
+    card.addEventListener('click', () => selectEcosystem(ecosystem.id, 'environment'));
     grid.appendChild(card);
   });
 
@@ -291,7 +291,7 @@ function renderEnvironmentGrid() {
   overlay.appendChild(back);
 }
 
-function selectEcosystem(ecosystemId) {
+function selectEcosystem(ecosystemId, selectionType) {
   overlay.innerHTML = '';
 
   const ecosystem = ECOSYSTEMS[ecosystemId];
@@ -362,7 +362,7 @@ function selectEcosystem(ecosystemId) {
         throw new Error('invalid');
       }
 
-      fadeOut(() => onReadyCallback(ecosystemId, quoteData));
+      fadeOut(() => onReadyCallback(ecosystemId, quoteData, selectionType));
     } catch {
       errorText.textContent =
         'The creature waits. Nothing moves. Check the symbol and try again.';

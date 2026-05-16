@@ -65,15 +65,110 @@ const STATE_LIGHT = {
   crisis:      { ambientMult: 0.5, sunMult: 1.4,  sunColor: 0xffffff, fogMult: 1.8 },
 };
 
-// Particle mode returned to caller for weather.js — indexed by [biome][state]
+// Particle mode returned to caller for weather.js — indexed by [biome][visualState]
 const PARTICLE_TRIGGERS = {
-  arctic_tundra:      { stressed: 'snow', crisis: 'snow' },
-  boreal_forest:      { stressed: 'snow', crisis: 'ice' },
-  temperate_woodland: { uneasy:  'leaves' },
-  woodland_edge:      { uneasy:  'leaves', stressed: 'leaves' },
-  open_grassland:     { stressed: 'dust',  crisis: 'dust' },
-  andean_highland:    { stressed: 'frost', crisis: 'snow' },
-  arid_scrubland:     { stressed: 'dust',  crisis: 'dust' },
+  arctic_tundra:      { uneasy: 'mist',   stressed: 'snow',  crisis: 'snow'       },
+  boreal_forest:      { uneasy: 'mist',   stressed: 'rain',  crisis: 'rain_heavy' },
+  temperate_woodland: { uneasy: 'leaves', stressed: 'rain',  crisis: 'rain_heavy' },
+  woodland_edge:      { uneasy: 'leaves', stressed: 'rain',  crisis: 'rain_heavy' },
+  open_grassland:     { uneasy: 'mist',   stressed: 'dust',  crisis: 'dust'       },
+  andean_highland:    { uneasy: 'mist',   stressed: 'frost', crisis: 'snow'       },
+  arid_scrubland:     {                   stressed: 'dust',  crisis: 'dust'       },
+};
+
+// Additive FBX objects spawned per market state on top of the base layer.
+// Placement uses seededPos with baseOffset=300 to avoid colliding with base layer indices.
+const STATE_LAYER_ASSETS = {
+  arctic_tundra: {
+    flourishing: [
+      { file: 'Pine_1.fbx',           count: 2, radius: 10, spread: 3 },
+      { file: 'Grass_Wispy_Tall.fbx', count: 3, radius: 5,  spread: 4 },
+    ],
+    stressed: [
+      { file: 'DeadTree_1.fbx', count: 1, radius: 9, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_1.fbx',    count: 3, radius: 8,  spread: 4 },
+      { file: 'Rock_Medium_2.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+  },
+  boreal_forest: {
+    flourishing: [
+      { file: 'Pine_1.fbx', count: 3, radius: 11, spread: 4 },
+      { file: 'Pine_3.fbx', count: 2, radius: 14, spread: 3 },
+    ],
+    stressed: [
+      { file: 'DeadTree_1.fbx', count: 1, radius: 9, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_1.fbx',    count: 3, radius: 8,  spread: 4 },
+      { file: 'DeadTree_USN_1.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+  },
+  temperate_woodland: {
+    flourishing: [
+      { file: 'MapleTree_1.fbx',     count: 2, radius: 12, spread: 3 },
+      { file: 'Flower_1.fbx',        count: 5, radius: 4,  spread: 5 },
+      { file: 'Mushroom_Common.fbx', count: 3, radius: 3,  spread: 4 },
+    ],
+    stressed: [
+      { file: 'DeadTree_1.fbx', count: 1, radius: 10, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_1.fbx',     count: 3, radius: 8,  spread: 4 },
+      { file: 'DeadTree_USN_1.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+  },
+  woodland_edge: {
+    flourishing: [
+      { file: 'CommonTree_1.fbx', count: 2, radius: 12, spread: 3 },
+      { file: 'Flower_1.fbx',     count: 4, radius: 4,  spread: 5 },
+    ],
+    stressed: [
+      { file: 'TwistedTree_1.fbx', count: 1, radius: 11, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_1.fbx',    count: 2, radius: 9,  spread: 3 },
+      { file: 'TwistedTree_1.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+  },
+  open_grassland: {
+    flourishing: [
+      { file: 'Flower_1.fbx',          count: 6, radius: 4, spread: 6 },
+      { file: 'Grass_Common_Tall.fbx', count: 4, radius: 5, spread: 5 },
+    ],
+    stressed: [
+      { file: 'Rock_Medium_1.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+    crisis: [
+      { file: 'Rock_Medium_2.fbx', count: 3, radius: 10, spread: 4 },
+    ],
+  },
+  andean_highland: {
+    flourishing: [
+      { file: 'Pine_1.fbx',           count: 2, radius: 13, spread: 2 },
+      { file: 'Grass_Wispy_Tall.fbx', count: 3, radius: 5,  spread: 4 },
+    ],
+    stressed: [
+      { file: 'DeadTree_USN_1.fbx', count: 1, radius: 11, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_USN_1.fbx', count: 3, radius: 9,  spread: 4 },
+      { file: 'Rock_Medium_2.fbx',  count: 2, radius: 13, spread: 3 },
+    ],
+  },
+  arid_scrubland: {
+    flourishing: [
+      { file: 'Grass_Wispy_Tall.fbx', count: 3, radius: 5, spread: 4 },
+    ],
+    stressed: [
+      { file: 'TwistedTree_1.fbx', count: 1, radius: 11, spread: 2 },
+    ],
+    crisis: [
+      { file: 'DeadTree_1.fbx',    count: 3, radius: 8,  spread: 4 },
+      { file: 'TwistedTree_1.fbx', count: 2, radius: 12, spread: 3 },
+    ],
+  },
 };
 
 // Anomaly: subtle clickable element, biome-appropriate.
@@ -168,6 +263,9 @@ let groundMesh = null;
 let currentBiome = null;
 let anomalyMesh = null;
 let anomalyTime = 0;
+let sunRaySprite = null;
+let sunRayTargetOpacity = 0;
+let dynamicObjects = [];
 
 const envMaterials = []; // { material, h, s, l } — base tinted HSL for sat animation
 let satFrom = 1.0;
@@ -233,11 +331,80 @@ function loadEnvironmentAssets(scene, ecosystemId) {
   }
 }
 
+function removeDynamicObjects() {
+  for (const obj of dynamicObjects) _scene.remove(obj);
+  dynamicObjects = [];
+}
+
+function addStateLayer(state) {
+  const layers = STATE_LAYER_ASSETS[currentBiome]?.[state];
+  if (!layers) return;
+  const tintColor = new THREE.Color(BIOME_TINTS[currentBiome] ?? 0xffffff);
+  const loader = new FBXLoader();
+  let idx = 300;
+  for (const { file, count, radius, spread } of layers) {
+    for (let i = 0; i < count; i++) {
+      const pi = idx++;
+      loader.load(
+        `nature/${file}`,
+        object => {
+          object.animations = [];
+          object.scale.setScalar(0.01);
+          const [x, , z] = seededPos(pi, radius, spread);
+          object.position.set(x, 0, z);
+          object.rotation.y = pi * 1.618;
+          object.traverse(child => {
+            if (!child.isMesh) return;
+            child.castShadow = true;
+            child.receiveShadow = true;
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            const cloned = mats.map(m => {
+              if (!m) return m;
+              const c = m.clone();
+              c.color.multiply(tintColor);
+              const hsl = {};
+              c.color.getHSL(hsl);
+              envMaterials.push({ material: c, h: hsl.h, s: hsl.s, l: hsl.l });
+              c.color.setHSL(hsl.h, Math.max(0, hsl.s * _currentSat), hsl.l);
+              return c;
+            });
+            child.material = Array.isArray(child.material) ? cloned : cloned[0];
+          });
+          _scene.add(object);
+          dynamicObjects.push(object);
+        },
+        undefined,
+        err => console.error(`[environment] state-layer FBX load failed: ${file}`, err)
+      );
+    }
+  }
+}
+
+function updateSunRay(state) {
+  sunRayTargetOpacity = state === 'flourishing' ? 0.35 : state === 'stable' ? 0.07 : 0;
+}
+
+function buildSunRayTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0,    'rgba(255,240,180,0.9)');
+  g.addColorStop(0.35, 'rgba(255,220,120,0.4)');
+  g.addColorStop(1,    'rgba(255,200,80,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(canvas);
+}
+
 export function initEnvironment(scene, ecosystemId) {
   _scene = scene;
   currentBiome = ecosystemId;
   anomalyMesh = null;
   anomalyTime = 0;
+  sunRaySprite = null;
+  sunRayTargetOpacity = 0;
+  dynamicObjects = [];
 
   // Reset FBX color transition state for new session
   envMaterials.length = 0;
@@ -306,6 +473,19 @@ export function initEnvironment(scene, ecosystemId) {
     scene.add(anomalyMesh);
   }
 
+  // Sun ray sprite — fades in at flourishing, invisible by default
+  // sx/sy/sz already in scope from the sun light setup above
+  sunRaySprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: buildSunRayTexture(),
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  }));
+  sunRaySprite.position.set(sx * 3, sy * 2.5, sz * 3);
+  sunRaySprite.scale.set(22, 22, 1);
+  scene.add(sunRaySprite);
+
   // FBX environment geometry — async, populates envMaterials as files resolve
   loadEnvironmentAssets(scene, ecosystemId);
 }
@@ -315,10 +495,17 @@ export function getAnomaly() {
 }
 
 export function animateAnomaly(delta) {
-  if (!anomalyMesh) return;
-  anomalyTime += delta;
-  anomalyMesh.material.opacity = 0.12 + Math.sin(anomalyTime * 0.65) * 0.10;
-  anomalyMesh.rotation.y += delta * 0.18;
+  if (anomalyMesh) {
+    anomalyTime += delta;
+    anomalyMesh.material.opacity = 0.12 + Math.sin(anomalyTime * 0.65) * 0.10;
+    anomalyMesh.rotation.y += delta * 0.18;
+  }
+
+  // Sun ray opacity lerp
+  if (sunRaySprite) {
+    sunRaySprite.material.opacity +=
+      (sunRayTargetOpacity - sunRaySprite.material.opacity) * Math.min(1, delta * 0.6);
+  }
 
   // Saturation color transition tick
   if (colorProgress < 1) {
@@ -332,6 +519,10 @@ export function animateAnomaly(delta) {
 
 export function applyMarketState(state) {
   if (!ambientLight || !sunLight) return 'none';
+
+  removeDynamicObjects();
+  addStateLayer(state);
+  updateSunRay(state);
 
   const mod = STATE_LIGHT[state] ?? STATE_LIGHT.stable;
   const cfg = BIOME[currentBiome];

@@ -1,7 +1,8 @@
 node_modules
 dist
 .env
-.claude/
+# .claude/ project settings are committed (hooks, settings.json)
+# personal/session files are not present in repo .claude/
 src/world/Stylized Nature MegaKit*/
 src/world/Ultimate Animated Animals*/
 src/world/Ultimate Stylized Nature*/

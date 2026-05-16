@@ -8,21 +8,28 @@ import { initEnvironment, applyMarketState, getAnomaly, animateAnomaly } from '.
 import { loadCreature, updateCreature, setMarketState, moveCreatureTo } from './world/creature.js';
 import { transitionState, triggerInversion, isInversionLocked, isInversionActive } from './world/transitions.js';
 import { INVERSION_MAP } from './data/marketStates.js';
+import { initWeather, setWeatherState, updateWeather } from './world/weather.js';
 
 const POLL_INTERVAL_MS = 60_000;
 
 let currentEcosystemId = null;
 let currentState = null;
 let currentQuoteData = null;
+let currentSelectionType = 'environment';
 let camera = null;
 let renderer = null;
 
+function getVisualState(rawState) {
+  return currentSelectionType === 'creature' ? (INVERSION_MAP[rawState] ?? rawState) : rawState;
+}
+
 initEntryScreen(onReady);
 
-async function onReady(ecosystemId, quoteData) {
+async function onReady(ecosystemId, quoteData, selectionType) {
   currentEcosystemId = ecosystemId;
   currentState = getMarketState(quoteData.change);
   currentQuoteData = quoteData;
+  currentSelectionType = selectionType ?? 'environment';
 
   // Canvas container sits behind all UI
   const container = document.createElement('div');
@@ -44,9 +51,12 @@ async function onReady(ecosystemId, quoteData) {
   // World layer
   initEnvironment(scene, ecosystemId);
   loadCreature(scene, ecosystemId);
-  applyMarketState(currentState);
-  setMarketState(currentState);
-  displayNarrative(ecosystemId, currentState, quoteData);
+  initWeather(scene);
+  const visualState = getVisualState(currentState);
+  const initTrigger = applyMarketState(visualState);
+  setMarketState(visualState);
+  setWeatherState(initTrigger, visualState);
+  displayNarrative(ecosystemId, visualState, quoteData);
 
   // Anomaly click detection
   renderer.domElement.addEventListener('click', e => onCanvasClick(e, scene));
@@ -55,6 +65,7 @@ async function onReady(ecosystemId, quoteData) {
   startRenderLoop(scene, camera, renderer, clock, delta => {
     updateCreature(delta);
     animateAnomaly(delta);
+    updateWeather(delta);
   });
 
   // Polling
@@ -79,12 +90,16 @@ async function poll(symbol) {
   if (newState !== currentState) {
     const prev = currentState;
     currentState = newState;
-    await transitionState(() => applyMarketState(currentState));
-    setMarketState(currentState);
-    displayNarrative(currentEcosystemId, currentState, quoteData);
-    console.log(`[LGM] ${prev} → ${currentState}`);
+    const vState = getVisualState(currentState);
+    await transitionState(() => {
+      const trigger = applyMarketState(vState);
+      setWeatherState(trigger, vState);
+    });
+    setMarketState(vState);
+    displayNarrative(currentEcosystemId, vState, quoteData);
+    console.log(`[LGM] ${prev} → ${currentState} (visual: ${vState})`);
   } else {
-    displayNarrative(currentEcosystemId, currentState, quoteData);
+    displayNarrative(currentEcosystemId, getVisualState(currentState), quoteData);
   }
 }
 
@@ -102,17 +117,21 @@ function onCanvasClick(e, scene) {
     if (anomaly) {
       const hits = raycaster.intersectObject(anomaly, true);
       if (hits.length > 0) {
-        const invertedState = INVERSION_MAP[currentState];
-        console.log(`[LGM] inversion triggered: ${currentState} → ${invertedState}`);
+        const currentVisual = getVisualState(currentState);
+        const invertedVisual = INVERSION_MAP[currentVisual];
+        console.log(`[LGM] inversion triggered: ${currentVisual} → ${invertedVisual}`);
         triggerInversion(
           () => {
-            applyMarketState(invertedState);
+            const invTrigger = applyMarketState(invertedVisual);
+            setWeatherState(invTrigger, invertedVisual);
             displayInversion(currentEcosystemId);
           },
           () => {
-            applyMarketState(currentState);
-            displayNarrative(currentEcosystemId, currentState, currentQuoteData);
-            console.log(`[LGM] inversion ended, restored: ${currentState}`);
+            const vState = getVisualState(currentState);
+            const trigger = applyMarketState(vState);
+            setWeatherState(trigger, vState);
+            displayNarrative(currentEcosystemId, vState, currentQuoteData);
+            console.log(`[LGM] inversion ended, restored: ${vState}`);
           }
         );
         return;
